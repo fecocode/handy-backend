@@ -1,0 +1,26 @@
+service: handy-mailing-microservice
+frameworkVersion: "2"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  profile: serverlessUser
+  lambdaHashingVersion: 20201221
+  iam:
+    role:
+      statements:
+        - Sid: MailingService
+          Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
+
+functions:
+  sendEmail:
+    handler: api/sendGenericEmail.handler
+    events:
+      - http:
+          path: mailing/send-email/generic
+          method: POST
+          cors: true

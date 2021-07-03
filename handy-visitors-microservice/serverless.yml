@@ -1,0 +1,60 @@
+service: handy-visitors-microservice
+frameworkVersion: "2"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  profile: serverlessUser
+  lambdaHashingVersion: 20201221
+  environment:
+    VISITORS_TABLE: ${self:custom.visitorsTable}
+  iam:
+    role:
+      statements:
+        - Sid: VisitorsTable
+          Effect: Allow
+          Action:
+            - dynamodb:DescribeTable
+            - dynamodb:CreateTable
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:*:*:table/HandyARVisitorsTable*"
+custom:
+  visitorsTable: HandyARVisitorsTable
+
+functions:
+  recordVisit:
+    handler: api/operations/recordVisit.handler
+    events:
+      - http:
+          path: visits/record/
+          method: POST
+          cors: true
+
+resources:
+  Resources:
+    HandyARVisitorsTable:
+      Type: "AWS::DynamoDB::Table"
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:custom.visitorsTable}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: codeId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: CodeIndex
+            KeySchema:
+              - AttributeName: codeId
+                KeyType: HASH
+            Projection:
+              ProjectionType: "ALL"
+        BillingMode: PAY_PER_REQUEST

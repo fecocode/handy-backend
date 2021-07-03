@@ -1,0 +1,96 @@
+service: handy-codes-microservice
+frameworkVersion: "2"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  profile: serverlessUser
+  lambdaHashingVersion: 20201221
+  environment:
+    CODES_TABLE: ${self:custom.codesTable}
+  iam:
+    role:
+      statements:
+        - Sid: CodesTable
+          Effect: Allow
+          Action:
+            - dynamodb:DescribeTable
+            - dynamodb:CreateTable
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:*:*:table/HandyARCodesTable*"
+custom:
+  codesTable: HandyARCodesTable
+
+functions:
+  getCodeBySlug:
+    handler: api/getters/bySlug.handler
+    events:
+      - http:
+          path: codes/by-slug/{slug}
+          method: GET
+          cors: true
+  getClientCodes:
+    handler: api/getters/byClient.handler
+    events:
+      - http:
+          path: codes/by-client/{clientId}
+          method: GET
+          cors: true
+  changeCodeRedirection:
+    handler: api/mutations/changeRedirection.handler
+    events:
+      - http:
+          path: codes/change-redirection/{id}
+          method: PATCH
+          cors: true
+  createCode:
+    handler: api/operations/create.handler
+    events:
+      - http:
+          path: codes/create/
+          method: POST
+          cors: true
+  deleteCode:
+    handler: api/operations/delete.handler
+    events:
+      - http:
+          path: codes/delete/{id}
+          method: DELETE
+          cors: true
+
+resources:
+  Resources:
+    HandyARCodesTable:
+      Type: "AWS::DynamoDB::Table"
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:custom.codesTable}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: slug
+            AttributeType: S
+          - AttributeName: clientId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: SlugIndex
+            KeySchema:
+              - AttributeName: slug
+                KeyType: HASH
+            Projection:
+              ProjectionType: "ALL"
+          - IndexName: ClientIndex
+            KeySchema:
+              - AttributeName: clientId
+                KeyType: HASH
+            Projection:
+              ProjectionType: "ALL"
+        BillingMode: PAY_PER_REQUEST
